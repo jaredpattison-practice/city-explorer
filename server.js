@@ -22,6 +22,8 @@ app.get('/location', (request, response) => {
 
 app.get('/weather', getWeather);
 
+app.get('/yelp', getYelp);
+
 // Make sure the server is listening for requests
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
 
@@ -65,6 +67,25 @@ function getWeather(request, response) {
       });
 
       response.send(weatherSummaries);
+    })
+    .catch(error => handleError(error, response));
+}
+
+function Yelp(business) {
+  this.name = business.name;
+  console.log(this);
+}
+
+function getYelp(request, response) {
+  const url = `https://api.yelp.com/v3/businesses/search?latitude=37.786882&longitude=-122.399972`
+
+  superagent.get(url)
+    .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
+    .then(result => {
+      const yelpBusinesses = result.body.businesses.map(business => {
+        return new Yelp(business);
+      });
+      response.send(yelpBusinesses);
     })
     .catch(error => handleError(error, response));
 }
