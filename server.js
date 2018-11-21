@@ -25,6 +25,8 @@ app.get('/weather', getWeather);
 
 app.get('/yelp', getYelp);
 
+app.get('/movies', getMovies);
+
 // Make sure the server is listening for requests
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
 
@@ -55,6 +57,10 @@ function Yelp(business) {
   // console.log(this);
 }
 
+function Movie(movie) {
+  this.
+}
+
 // Helper Functions
 function searchToLatLong(query) {
   const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${process.env.GEOCODE_API_KEY}`;
@@ -76,6 +82,19 @@ function getWeather(request, response) {
       });
 
       response.send(weatherSummaries);
+    })
+    .catch(error => handleError(error, response));
+}
+
+function getMovies(request, response) {
+  const url = `https://api.themoviedb.org/3/search/movie?api_key=${MOVIES_API_KEY}&query=${request.query.data.search_query}`;
+
+  superagent.get(url)
+    .then(result => {
+      const moviesFilmed = result.body.map(movie => {
+        return new Movie(movie);
+      });
+      response.send(moviesFilmed);
     })
     .catch(error => handleError(error, response));
 }
