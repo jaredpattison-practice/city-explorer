@@ -16,6 +16,7 @@ app.use(cors());
 // API Routes
 app.get('/location', (request, response) => {
   searchToLatLong(request.query.data)
+  // console.log(request.query.data)
     .then(location => response.send(location))
     .catch(error => handleError(error, response));
 })
@@ -46,6 +47,14 @@ function Weather(day) {
   this.time = new Date(day.time * 1000).toString().slice(0, 15);
 }
 
+function Yelp(business) {
+  this.name = business.name;
+  this.image_url = business.image_url;
+  this.rating = business.rating;
+  this.price = business.price;
+  // console.log(this);
+}
+
 // Helper Functions
 function searchToLatLong(query) {
   const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${process.env.GEOCODE_API_KEY}`;
@@ -71,18 +80,15 @@ function getWeather(request, response) {
     .catch(error => handleError(error, response));
 }
 
-function Yelp(business) {
-  this.name = business.name;
-  console.log(this);
-}
+
 
 function getYelp(request, response) {
-  const url = `https://api.yelp.com/v3/businesses/search?latitude=37.786882&longitude=-122.399972`
-
+  const url = `https://api.yelp.com/v3/businesses/search?location=${request.query.data.search_query}`
   superagent.get(url)
     .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
     .then(result => {
       const yelpBusinesses = result.body.businesses.map(business => {
+        // console.log(result.body.businesses)
         return new Yelp(business);
       });
       response.send(yelpBusinesses);

@@ -31,8 +31,8 @@ Estimate of time needed to complete: 2hr
 
 Start time: 10:00
 
-Finish time: 12:00, but not complete
-Actual time needed to complete: _____
+Finish time: 1:00
+Actual time needed to complete: 3hr
 
 Number and name of feature: ________________________________
 
