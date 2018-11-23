@@ -25,6 +25,8 @@ app.get('/weather', getWeather);
 
 app.get('/yelp', getYelp);
 
+app.get('/movies', getMovies);
+
 // Make sure the server is listening for requests
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
 
@@ -52,7 +54,15 @@ function Yelp(business) {
   this.image_url = business.image_url;
   this.rating = business.rating;
   this.price = business.price;
-  // console.log(this);
+}
+
+function Movie(movie) {
+  this.title = movie.title;
+  this.released_on = movie.released_on;
+  this.total_votes = movie.total_votes;
+  this.average_votes = movie.average_votes;
+  this.overview = movie.overview;
+  this.image_url = `https://image.tmdb.org/t/p/w500/${movie.poster_path}`;
 }
 
 // Helper Functions
@@ -80,10 +90,24 @@ function getWeather(request, response) {
     .catch(error => handleError(error, response));
 }
 
+function getMovies(request, response) {
+  const url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIES_API_KEY}&query=${request.query.data.search_query}`;
+
+  superagent.get(url)
+    .then(result => {
+      const moviesFilmed = result.body.results.map(film => {
+        return new Movie(film);
+      });
+      response.send(moviesFilmed);
+    })
+    .catch(error => handleError(error, response));
+}
+
 
 
 function getYelp(request, response) {
   const url = `https://api.yelp.com/v3/businesses/search?location=${request.query.data.search_query}`
+
   superagent.get(url)
     .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
     .then(result => {
