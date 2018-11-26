@@ -27,6 +27,8 @@ app.get('/yelp', getYelp);
 
 app.get('/movies', getMovies);
 
+app.get('/trails', getTrails);
+
 // Make sure the server is listening for requests
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
 
@@ -54,6 +56,18 @@ function Yelp(business) {
   this.image_url = business.image_url;
   this.rating = business.rating;
   this.price = business.price;
+}
+
+function Trails(trail) {
+  this.name = trail.name;
+  this.location = trail.location;
+  this.length = trail.length;
+  this.condition_date = trail.condition_date;
+  this.condition_time = trail.condition_time;
+  this.conditions = trail.conditions;
+  this.stars = trail.stars;
+  this.star_votes = trail.star_votes;
+  this.summary = trail.summary;
 }
 
 function Movie(movie) {
@@ -92,10 +106,11 @@ function getWeather(request, response) {
 
 function getMovies(request, response) {
   const url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIES_API_KEY}&query=${request.query.data.search_query}`;
-
+  
   superagent.get(url)
     .then(result => {
       const moviesFilmed = result.body.results.map(film => {
+        // console.log(film);
         return new Movie(film);
       });
       response.send(moviesFilmed);
@@ -103,6 +118,19 @@ function getMovies(request, response) {
     .catch(error => handleError(error, response));
 }
 
+function getTrails(request, response) {
+  const url = `https://www.hikingproject.com/data/get-trails?lat=40.0274&lon=-105.2519&maxDistance=10&key=${process.env.TRAILS_API_KEY}`;
+
+  superagent.get(url)
+    .then(result => {
+      console.log('hello');
+      // const trails = result.trails.map(path => {
+        // return new Trails(path);
+      console.log('hello', result.body);
+      // })
+
+    })
+}
 
 
 function getYelp(request, response) {

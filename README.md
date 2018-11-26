@@ -34,12 +34,31 @@ Start time: 10:00
 Finish time: 1:00
 Actual time needed to complete: 3hr
 
-Number and name of feature: ________________________________
+Number and name of feature: Movies API
 
-Estimate of time needed to complete: _____
+Estimate of time needed to complete: 2 hr
 
 Start time: _____
 
 Finish time: _____
 
-Actual time needed to complete: _____
+Actual time needed to complete: 3 hr
+
+Number and name of feature: trails
+
+Estimate of time needed to complete: 2hr
+
+Start time: 10:45
+
+Finish time: 
+Actual time needed to complete: 3hr
+
+Number and name of feature: Movies API
+
+Estimate of time needed to complete: 2 hr
+
+Start time: _____
+
+Finish time: _____
+
+Actual time needed to complete: 3 hr
