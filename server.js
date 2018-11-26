@@ -123,13 +123,13 @@ function getTrails(request, response) {
 
   superagent.get(url)
     .then(result => {
-      console.log('hello');
-      // const trails = result.trails.map(path => {
-        // return new Trails(path);
-      console.log('hello', result.body);
-      // })
-
+      const trails = result.body.trails.map(path => {
+        console.log(path);
+        return new Trails(path);
+      });
+      response.send(trails);
     })
+    .catch(error => handleError(error, response));
 }
 
 
