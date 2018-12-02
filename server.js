@@ -21,27 +21,18 @@ client.on('error', err => console.error(err));
 
 // API Routes
 app.get('/location', getLocation);
-
 app.get('/weather', getWeather);
-
 app.get('/yelp', getYelp);
-
 app.get('/movies', getMovies);
-
 app.get('/trails', getTrails);
-
 app.get('/meetups', getMeetup);
 
 // Make sure the server is listening for requests
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
 
-// Error handler
-function handleError(err, res) {
-  console.error(err);
-  if (res) res.status(500).send('Sorry, something went wrong');
-}
+// ++++++++++++ MODELS ++++++++++++++++
 
-// Models
+// Location model
 function Location(query, res) {
   this.tableName = 'locations';
   this.search_query = query;
@@ -51,37 +42,41 @@ function Location(query, res) {
   this.created_at = Date.now();
 }
 
-Location.lookupLocation = (location) => {
-  const SQL = `SELECT * FROM locations WHERE search_query=$1;`
+Location.lookupLocation = location => {
+  const SQL = `SELECT * FROM locations WHERE search_query=$1;`;
   const values = [location.query];
 
-  return client.query(SQL, values)
+  return client
+    .query(SQL, values)
     .then(result => {
       if (result.rowCount > 0) {
-        console.log('We have a match for location');
         location.cacheHit(result);
       } else {
-        console.log('Go fish');
         location.cacheMiss();
       }
     })
     .catch(console.error);
-}
+};
 
 // Location.prototype.save = function() and so on
 Location.prototype = {
-  save: function () {
+  save: function() {
     const SQL = `INSERT INTO locations (search_query, formatted_query, latitude, longitude) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING RETURNING id;`;
-    const values = [this.search_query, this.formatted_query, this.latitude, this.longitude];
-  
-    return client.query(SQL, values)
-      .then(result => {
-        this.id = result.rows[0].id;
-        return this;
-      });
+    const values = [
+      this.search_query,
+      this.formatted_query,
+      this.latitude,
+      this.longitude
+    ];
+
+    return client.query(SQL, values).then(result => {
+      this.id = result.rows[0].id;
+      return this;
+    });
   }
 };
 
+// Weather model
 function Weather(day) {
   this.tableName = 'weathers';
   this.forecast = day.summary;
@@ -94,142 +89,161 @@ Weather.lookup = lookup;
 Weather.deleteByLocationId = deleteByLocationId;
 
 Weather.prototype = {
-  save: function (location_id) {
-    const SQL = `INSERT INTO ${this.tableName} (forecast, time, created_at, location_id) VALUES ($1, $2, $3, $4);`;
+  save: function(location_id) {
+    const SQL = `INSERT INTO ${
+      this.tableName
+    } (forecast, time, created_at, location_id) VALUES ($1, $2, $3, $4);`;
     const values = [this.forecast, this.time, this.created_at, location_id];
 
     client.query(SQL, values);
   }
-}
+};
 
+// Yelp Model
 function Yelp(business) {
+  this.tableName = 'businesses';
   this.name = business.name;
   this.image_url = business.image_url;
   this.rating = business.rating;
   this.price = business.price;
   this.url = business.url;
+  this.created_at = Date.now();
 }
 
-function Meetup(event) {
-  this.link = event.link;
-  this.name = event.name;
-  this.host = event.group.name;
-  this.creation_date = new Date(event.created * 1000).toString().slice(0,10);
-}
+Yelp.tableName = 'businesses';
+Yelp.lookup = lookup;
+Yelp.deleteByLocationId = deleteByLocationId;
 
-function Trails(trail) {
-  this.name = trail.name;
-  this.location = trail.location;
-  this.length = trail.length;
-  this.condition_date = trail.condition_date;
-  this.condition_time = trail.condition_time;
-  this.conditions = trail.conditions;
-  this.stars = trail.stars;
-  this.star_votes = trail.star_votes;
-  this.summary = trail.summary;
-  this.trail_url = trail.url;
-}
+Yelp.prototype = {
+  save: function(location_id) {
+    const SQL = `INSERT INTO ${
+      this.tableName
+    } (name, image_url, rating, price, url, created_at, location_id) VALUES ($1, $2, $3, $4, $5, $6, $7);`;
+    const values = [
+      this.name,
+      this.image_url,
+      this.rating,
+      this.price,
+      this.url,
+      this.created_at,
+      location_id
+    ];
 
+    client.query(SQL, values);
+  }
+};
+
+// Movie Model
 function Movie(movie) {
+  this.tableName = 'movies';
   this.title = movie.title;
   this.released_on = movie.released_on;
   this.total_votes = movie.total_votes;
   this.average_votes = movie.average_votes;
   this.overview = movie.overview;
   this.image_url = `https://image.tmdb.org/t/p/w500/${movie.poster_path}`;
+  this.created_at = Date.now();
 }
 
-// Helper Functions
-// function searchToLatLong(query) {
-//   const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${process.env.GEOCODE_API_KEY}`;
+Movie.tableName = 'movies';
+Movie.lookup = lookup;
+Movie.deleteByLocationId = deleteByLocationId;
 
-//   return superagent.get(url)
-//     .then(res => {
-//       return new Location(query, res);
-//     })
-//     .catch(error => handleError(error));
-// }
+Movie.prototype = {
+  save: function(location_id) {
+    const SQL = `INSERT INTO ${
+      this.tableName
+    } (title, released_on, total_votes, average_votes, overview, image_url, created_at, location_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`;
+    const values = [
+      this.title,
+      this.released_on,
+      this.total_votes,
+      this.average_votes,
+      this.overview,
+      this.image_url,
+      this.created_at,
+      location_id
+    ];
 
-// function getWeather(request, response) {
-//   const url = `https://api.darksky.net/forecast/${process.env.WEATHER_API_KEY}/${request.query.data.latitude},${request.query.data.longitude}`;
+    client.query(SQL, values);
+  }
+};
 
-//   superagent.get(url)
-//     .then(result => {
-//       const weatherSummaries = result.body.daily.data.map(day => {
-//         return new Weather(day);
-//       });
+// Trails Model
+function Trails(trail) {
+  this.tableName = 'trails';
+  this.name = trail.name;
+  this.location = trail.location;
+  this.length = trail.length;
+  this.condition_date = Date(trail.conditionDate).slice(0, 10);
+  this.condition_time = Date(trail.conditionDate).slice(16, 21);
+  this.conditions = trail.conditionDetails ? `${trail.conditionStatus}, ${trail.conditionDetails}` : trail.conditionStatus;
+  this.stars = trail.stars;
+  this.star_votes = trail.starVotes;
+  this.summary = trail.summary;
+  this.trail_url = trail.url;
+  this.created_at = Date.now();
+}
+Trails.tableName = 'trails'; Trails.lookup = lookup; Trails.deleteByLocationId = deleteByLocationId;
+Trails.prototype = {
+  save: function(location_id) {
+    const SQL = `INSERT INTO ${this.tableName} (name, location, length, condition_date, condition_time, conditions, stars, star_votes, summary, trail_url, created_at, location_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);`;
+    const values = [
+      this.name,
+      this.location,
+      this.length,
+      this.condition_date,
+      this.condition_time,
+      this.conditions,
+      this.stars,
+      this.star_votes,
+      this.summary,
+      this.trail_url,
+      this.created_at,
+      location_id
+    ];
 
-//       response.send(weatherSummaries);
-//     })
-//     .catch(error => handleError(error, response));
-// }
+    client.query(SQL, values);
+  }
+};
 
-function getMovies(request, response) {
-  const url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIES_API_KEY}&query=${request.query.data.search_query}`;
-  
-  superagent.get(url)
-    .then(result => {
-      const moviesFilmed = result.body.results.map(film => {
-        // console.log(film);
-        return new Movie(film);
-      });
-      response.send(moviesFilmed);
-    })
-    .catch(error => handleError(error, response));
+// Meetup Model
+function Meetup(event) {
+  this.tableName = 'meetups';
+  this.link = event.link;
+  this.name = event.name;
+  this.host = event.group.name;
+  this.creation_date = new Date(event.created * 1000).toString().slice(0,10);
+  this.created_at = Date.now();
 }
 
-function getTrails(request, response) {
-  const url = `https://www.hikingproject.com/data/get-trails?lat=${request.query.data.latitude}&lon=${request.query.data.longitude}&maxDistance=10&key=${process.env.TRAILS_API_KEY}`;
+Meetup.tableName = 'meetups'; Meetup.lookup = lookup; Meetup.deleteByLocationId = deleteByLocationId;
+Meetup.prototype = {
+  save: function(location_id) {
+    const SQL = `INSERT INTO ${this.tableName} (link, name, host, creation_date, created_at, location_id) VALUES ($1, $2, $3, $4, $5, $6);`;
+    const values = [
+      this.link,
+      this.name,
+      this.host,
+      this.creation_date,
+      this.created_at,
+      location_id
+    ];
 
-  superagent.get(url)
-    .then(result => {
-      // console.log(result.body.trails);
-      const trails = result.body.trails.map(path => {
-        return new Trails(path);
-      });
-      response.send(trails);
-    })
-    .catch(error => handleError(error, response));
-}
+    client.query(SQL, values);
+  }
+};
 
-function getMeetup(request, response) {
-  const url = `https://api.meetup.com/find/upcoming_events?key=${process.env.MEETUP_API_KEY}&lat=${request.query.data.latitude}&lon=${request.query.data.longitude}`;
-
-  superagent.get(url)
-    .then(result => {
-      console.log(result.body.events)
-      const meetups = result.body.events.map(event => {
-        
-        // console.log(event.group);
-        return new Meetup(event);
-      })
-      response.send(meetups);
-
-    })
-    .catch(error => handleError(error, response));
-}
-
-function getYelp(request, response) {
-  const url = `https://api.yelp.com/v3/businesses/search?location=${request.query.data.search_query}`;
-
-  superagent.get(url)
-    .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
-    .then(result => {
-      const yelpBusinesses = result.body.businesses.map(business => {
-        // console.log(result.body.businesses)
-        return new Yelp(business);
-      });
-      response.send(yelpBusinesses);
-    })
-    .catch(error => handleError(error, response));
-}
+// ++++++++++++ HELPERS +++++++++++++++
+// These functions are assigned to properties on the models
 
 // Checks to see if there is DB data for a given location
 function lookup(options) {
   const SQL = `SELECT * FROM ${options.tableName} WHERE location_id=$1;`;
   const values = [options.location];
 
-  client.query(SQL, values)
+  client
+    .query(SQL, values)
     .then(result => {
       if (result.rowCount > 0) {
         options.cacheHit(result);
@@ -246,7 +260,13 @@ function deleteByLocationId(table, city) {
   return client.query(SQL);
 }
 
-// Handlers
+// ++++++++++++ HANDLERS ++++++++++++++++
+
+// Error handler
+function handleError(err, res) {
+  console.error(err);
+  if (res) res.status(500).send('Sorry, something went wrong');
+}
 
 // Location handler
 function getLocation(request, response) {
@@ -255,23 +275,24 @@ function getLocation(request, response) {
 
     query: request.query.data,
 
-    cacheHit: function (result) {
-      console.log(result.rows[0]);
+    cacheHit: function(result) {
       response.send(result.rows[0]);
     },
 
-    cacheMiss: function () {
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${this.query}&key=${process.env.GEOCODE_API_KEY}`;
+    cacheMiss: function() {
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${
+        this.query
+      }&key=${process.env.GEOCODE_API_KEY}`;
 
-      return superagent.get(url)
-        .then(res => {
-          const location = new Location(this.query, res);
-          location.save()
-            .then(location => response.send(location));
+      return superagent
+        .get(url)
+        .then(result => {
+          const location = new Location(this.query, result);
+          location.save().then(location => response.send(location));
         })
         .catch(error => handleError(error));
     }
-  })
+  });
 }
 
 // Weather handler
@@ -281,8 +302,9 @@ function getWeather(request, response) {
 
     location: request.query.data.id,
 
-    cacheHit: function (result) {
-      let ageOfResultsInMinutes = (Date.now() - result.rows[0].created_at) / (1000 * 60);
+    cacheHit: function(result) {
+      let ageOfResultsInMinutes =
+        (Date.now() - result.rows[0].created_at) / (1000 * 60);
       if (ageOfResultsInMinutes > 30) {
         Weather.deleteByLocationId(Weather.tableName, request.query.data.id);
         this.cacheMiss();
@@ -291,18 +313,168 @@ function getWeather(request, response) {
       }
     },
 
-    cacheMiss: function () {
-      const url = `https://api.darksky.net/forecast/${process.env.WEATHER_API_KEY}/${request.query.data.latitude},${request.query.data.longitude}`;
+    cacheMiss: function() {
+      const url = `https://api.darksky.net/forecast/${
+        process.env.WEATHER_API_KEY
+      }/${request.query.data.latitude},${request.query.data.longitude}`;
 
-      superagent.get(url)
+      return superagent
+        .get(url)
         .then(result => {
           const weatherSummaries = result.body.daily.data.map(day => {
             const summary = new Weather(day);
+            summary.save(request.query.data.id);
             return summary;
           });
           response.send(weatherSummaries);
         })
         .catch(error => handleError(error, response));
     }
-  })
+  });
+}
+
+// Yelp Handler
+function getYelp(request, response) {
+  Yelp.lookup({
+    tableName: Yelp.tableName,
+
+    location: request.query.data.id,
+
+    cacheHit: function(result) {
+      let ageOfResultsInMinutes =
+        (Date.now() - result.rows[0].created_at) / (1000 * 60);
+      if (ageOfResultsInMinutes > 1000) {
+        Yelp.deleteByLocationId(Yelp.tableName, request.query.data.id);
+        this.cacheMiss();
+      } else {
+        response.send(result.rows);
+      }
+    },
+
+    cacheMiss: function() {
+      const url = `https://api.yelp.com/v3/businesses/search?location=${
+        request.query.data.search_query
+      }`;
+
+      return superagent
+        .get(url)
+        .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
+        .then(result => {
+          const YelpBusinesses = result.body.businesses.map(newBusiness => {
+            const business = new Yelp(newBusiness);
+            business.save(request.query.data.id);
+            return business;
+          });
+          response.send(YelpBusinesses);
+        })
+        .catch(error => handleError(error, response));
+    }
+  });
+}
+
+// Movie Handler
+function getMovies(request, response) {
+  Movie.lookup({
+    tableName: Movie.tableName,
+
+    location: request.query.data.id,
+
+    cacheHit: function(result) {
+      let ageOfResultsInMinutes =
+        (Date.now() - result.rows[0].created_at) / (1000 * 60);
+      if (ageOfResultsInMinutes > 10000) {
+        Movie.deleteByLocationId(Movie.tableName, request.query.data.id);
+        this.cacheMiss();
+      } else {
+        response.send(result.rows);
+      }
+    },
+
+    cacheMiss: function() {
+      const url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIES_API_KEY}&query=${request.query.data.search_query}`;
+
+      return superagent
+        .get(url)
+        .then(result => {
+          const moviesFilmed = result.body.results.map(film => {
+            const movie = new Movie(film);
+            movie.save(request.query.data.id);
+            return movie;
+          });
+          response.send(moviesFilmed);
+        })
+        .catch(error => handleError(error, response));
+    }
+  });
+}
+
+// Trail Handler
+function getTrails(request, response) {
+  Trails.lookup({
+    tableName: Trails.tableName,
+
+    location: request.query.data.id,
+
+    cacheHit: function(result) {
+      let ageOfResultsInMinutes =
+        (Date.now() - result.rows[0].created_at) / (1000 * 60);
+      if (ageOfResultsInMinutes > 100) {
+        Trails.deleteByLocationId(Trails.tableName, request.query.data.id);
+        this.cacheMiss();
+      } else {
+        response.send(result.rows);
+      }
+    },
+
+    cacheMiss: function() {
+      const url = `https://www.hikingproject.com/data/get-trails?lat=${request.query.data.latitude}&lon=${request.query.data.longitude}&maxDistance=10&key=${process.env.TRAILS_API_KEY}`;
+
+      return superagent
+        .get(url)
+        .then(result => {
+          const trailsReturned = result.body.trails.map(trail => {
+            const trails = new Trails(trail);
+            trails.save(request.query.data.id);
+            return trails;
+          });
+          response.send(trailsReturned);
+        })
+        .catch(error => handleError(error, response));
+    }
+  });
+}
+
+// Meetup Handler
+function getMeetup(request, response) {
+  Meetup.lookup({
+    tableName: Meetup.tableName,
+
+    location: request.query.data.id,
+
+    cacheHit: function(result) {
+      let ageOfResultsInMinutes =
+        (Date.now() - result.rows[0].created_at) / (1000 * 60);
+      if (ageOfResultsInMinutes > 1000) {
+        Meetup.deleteByLocationId(Meetup.tableName, request.query.data.id);
+        this.cacheMiss();
+      } else {
+        response.send(result.rows);
+      }
+    },
+
+    cacheMiss: function() {
+      const url = `https://api.meetup.com/find/upcoming_events?key=${process.env.MEETUP_API_KEY}&lat=${request.query.data.latitude}&lon=${request.query.data.longitude}`;
+      return superagent
+        .get(url)
+        .then(result => {
+          const meetups = result.body.events.map(newEvent => {
+            const event = new Meetup(newEvent);
+            event.save(request.query.data.id);
+            return event;
+          });
+          response.send(meetups);
+        })
+        .catch(error => handleError(error, response));
+    }
+  });
 }
